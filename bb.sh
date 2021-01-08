@@ -333,6 +333,21 @@ edit() {
     fi
 }
 
+# Generate OGG
+
+ogg() {
+	left=$(( $og_width/15 ));
+	top=$(( $og_height/15 ));
+	fontsize=$(( 12+$og_width/67 ));
+	titlefontsize=$(( $fontsize*2 ));
+	linesize=$(( ($og_width -2*$left)*4/$fontsize ));
+	titlesize=$(( $linesize/2 ));		
+	except=$(echo "$except" | fold -s --width="$linesize"); 
+	title=$(echo "$title" | fold -s --width="$titlesize");
+	extop=$(( $top*2+$titlefontsize*(1+((${#title}*2)/$titlesize)) ));
+	convert -size "$og_width"x"$og_height" canvas:"$bg" -gravity NorthWest -pointsize "$titlefontsize" -annotate +"$left"+"$top" "$title" -pointsize "$fontsize" -annotate +"$left"+"$extop" "$except" ./ogg/"$name".png;
+}
+
 # Create a Twitter summary (twitter "card") for the post
 #
 # $1 the post file
