@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<channel><title>My fancy blog</title><link>http://example.com/blog/index.html</link>
+<description>A blog about turtles and carrots</description><language>en</language>
+<lastBuildDate>Fri, 08 Jan 2021 19:49:20 +0400</lastBuildDate>
+<pubDate>Fri, 08 Jan 2021 19:49:20 +0400</pubDate>
+<atom:link href="http://example.com/blog/feed.rss" rel="self" type="application/rss+xml" />
+<item><title>
+Тестовая записьт
+</title><description><![CDATA[
+
+<p>The rest of the text file is a <strong>Markdown</strong> blog post. The process will continue
+as soon as you exit your editor.</p>
+
+<p>Категории: <a href='category_keep-this-tag-format.html'>keep-this-tag-format</a>, <a href='category_tags-are-optional.html'>tags-are-optional</a>, <a href='category_beware-with-underscores-in-markdown.html'>beware-with-underscores-in-markdown</a>, <a href='category_example.html'>example</a></p>
+
+
+
+
+<!-- text end -->
+]]></description><link>http://example.com/blog/testowaq-zapisxt.html</link>
+<guid>http://example.com/blog/./testowaq-zapisxt.html</guid>
+<dc:creator>John Smith</dc:creator>
+<pubDate>Fri, 08 Jan 2021 19:43:01 +0400</pubDate></item>
+</channel></rss>
