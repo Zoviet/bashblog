@@ -35,6 +35,10 @@ global_variables() {
 
     # CC by-nc-nd is a good starting point, you can change this to "&copy;" for Copyright
     global_license="CC by-nc-nd"
+    
+    # Default editor
+    
+    default_editor='nano'
 
     # If you have a Google Analytics ID (UA-XXXXX) and wish to use the standard
     # embedding code, put it on global_analytics
@@ -46,6 +50,17 @@ global_variables() {
     # Leave this empty (i.e. "") if you don't want to use feedburner, 
     # or change it to your own URL
     global_feedburner=""
+    
+    # Autogenerate OpenGraph image from text. Uses imagemagick. If false first image from post content used.
+    global_ogg="true"
+    
+    #Default dimension of the og:image.  
+
+	og_width=968; #default width of the og:image in px. Facebook recommended 1200px min.
+
+	og_height=504; #default height of the og:image in px. Facebook recommended 630px min.
+
+	bg=white; #default background color of the og:image
 
     # Change this to your username if you want to use twitter for comments
     global_twitter_username=""
@@ -333,19 +348,67 @@ edit() {
     fi
 }
 
-# Generate OGG
 
+og__g() {
+	mds=($(find . -maxdepth 1 -name '*.md'))
+for md in ${mds[@]};do 
+	title="$(head -1 < $md)";
+	except="$(sed '1d' < $md)";
+	name=$(echo "$md" | sed -e 's/\.md//g' -e 's/\.\///g');
+	if [ -n ./ogg/$name'.png' ] || [ "$1" -eq "rebuild" ]  
+	then
+		left=$(( $og_width/15 ));
+		top=$(( $og_height/15 ));
+		fontsize=$(( 12+$og_width/67 ));
+		titlefontsize=$(( $fontsize*2 ));
+		linesize=$(( ($og_width -2*$left)*4/$fontsize ));
+		titlesize=$(( $linesize/2 ));		
+		except=$(echo "$except" | fold -s --width="$linesize"); 
+		title=$(echo "$title" | fold -s --width="$titlesize");
+		extop=$(( $top*2+$titlefontsize*(1+((${#title}*2)/$titlesize)) ));
+		convert -size "$og_width"x"$og_height" canvas:"$bg" -gravity NorthWest -pointsize "$titlefontsize" -annotate +"$left"+"$top" "$title" -pointsize "$fontsize" -annotate +"$left"+"$extop" "$except" ./ogg/"$name".png;
+		if [[ $? != 0 ]]; then 
+			echo 'Error image convert: '$name'.png';
+		fi
+	else
+		echo 'найдена картинка'
+	fi	
+done	
+}
+
+# Generate OGG
+#
+# $1 the post file
+# $2 the title
+# $3 the filename
 ogg() {
-	left=$(( $og_width/15 ));
-	top=$(( $og_height/15 ));
-	fontsize=$(( 12+$og_width/67 ));
-	titlefontsize=$(( $fontsize*2 ));
-	linesize=$(( ($og_width -2*$left)*4/$fontsize ));
-	titlesize=$(( $linesize/2 ));		
-	except=$(echo "$except" | fold -s --width="$linesize"); 
-	title=$(echo "$title" | fold -s --width="$titlesize");
-	extop=$(( $top*2+$titlefontsize*(1+((${#title}*2)/$titlesize)) ));
-	convert -size "$og_width"x"$og_height" canvas:"$bg" -gravity NorthWest -pointsize "$titlefontsize" -annotate +"$left"+"$top" "$title" -pointsize "$fontsize" -annotate +"$left"+"$extop" "$except" ./ogg/"$name".png;
+	echo "<meta property='og:title' content='$2'/>"
+	echo "<meta property='og:type' content='article' />"	
+	if [[ $global_ogg == false ]]; then 
+		image=$(sed -n '2,$ d; s/.*<img.*src="\([^"]*\)".*/\1/p' "$1") # First image 
+		[[ -z $image ]] && return
+		[[ $image =~ ^https?:// ]] || image=$global_url/$image
+		echo "<meta property='og:image' content='$image'/>"
+	else
+		echo "<meta property='og:image:width' content='$og_width'/>"
+		echo "<meta property='og:image:height' content='$og_height'/>"	
+		pngname=$(echo "$3" | sed -n '2,$ d; s/\(.[^\.\/]*\)\.html.*/\1/p') #OpenGraph image name	
+		left=$(( $og_width/15 ))
+		top=$(( $og_height/15 ))
+		fontsize=$(( 12+$og_width/67 ))
+		titlefontsize=$(( $fontsize*2 ))
+		linesize=$(( ($og_width -2*$left)*4/$fontsize ))
+		titlesize=$(( $linesize/2 ))
+		except=$(grep -v "^<p>$template_tags_line_header" "$1" | sed -e 's/<[^>]*>//g' | sed "s/\&mdash;/-/g" | sed "s/\"//g" | head -c 450 | fold -s --width="$linesize") 
+		title=$(echo "$2" | sed "s/\"//g" | sed "s/\&mdash;/-/g" | fold -s --width="$titlesize");
+		extop=$(( $top*2+$titlefontsize*(1+((${#title}*2)/$titlesize)) ));
+		convert -size "$og_width"x"$og_height" canvas:"$bg" -gravity NorthWest -pointsize "$titlefontsize" -annotate +"$left"+"$top" "$title" -pointsize "$fontsize" -annotate +"$left"+"$extop" "$except" ./ogg/"$pngname".png;	
+		if [[ $? != 0 ]]; then 
+			return
+		fi
+		image=$global_url/ogg/"$pngname".png
+		echo "<meta property='og:image' content='$image'/>"		
+	fi;
 }
 
 # Create a Twitter summary (twitter "card") for the post
@@ -447,6 +510,7 @@ create_html_page() {
         echo "<title>$title</title>"
         google_analytics
         twitter_card "$content" "$title"
+        ogg "$content" "$title" "$filename"
         echo "</head><body>"
         # stuff to add before the actual body content
         [[ -n $body_begin_file ]] && cat "$body_begin_file"
@@ -1090,7 +1154,7 @@ reset() {
     echo "Are you sure you want to delete all blog entries? Please write \"Yes, I am!\" "
     read -r line
     if [[ $line == "Yes, I am!" ]]; then
-        rm .*.html ./*.html ./*.css ./*.rss &> /dev/null
+        rm .*.html ./*.html ./*.css ./*.rss ./ogg/*.png &> /dev/null
         echo
         echo "Deleted all posts, stylesheets and feeds."
         echo "Kept your old '.backup.tar.gz' just in case, please delete it manually if needed."
@@ -1127,6 +1191,19 @@ date_version_detect() {
     fi    
 }
 
+# Set the default editor 
+set_editor() {
+	echo "Set the \$EDITOR environment variable in \$HOME/.bashrc file and $HOME/.bash_profile file. Editor is: $default_editor" 
+	grep -q 'export EDITOR=' $HOME/.bashrc && sed -i -e 's/\(export EDITOR=\)\(.*\)$/\1'$default_editor'/g' $HOME/.bashrc || echo 'export EDITOR='$default_editor >> $HOME/.bashrc
+	if [ -e $HOME/.bash_profile ]; then
+		grep -q 'export EDITOR=' $HOME/.bash_profile && sed -i -e 's/\(export EDITOR=\)\(.*\)$/\1'$default_editor'/g' $HOME/.bash_profile || echo 'export EDITOR='$default_editor >> $HOME/.bash_profile
+	else
+		echo 'export EDITOR='$default_editor > $HOME/.bash_profile
+	fi
+	exec "$BASH"
+	exit
+}
+
 # Main function
 # Encapsulated on its own function for readability purposes
 #
@@ -1141,9 +1218,10 @@ do_main() {
     global_variables_check
 
     # Check for $EDITOR
-    [[ -z $EDITOR ]] && 
-        echo "Please set your \$EDITOR environment variable. For example, to use nano, add the line 'export EDITOR=nano' to your \$HOME/.bashrc file" && exit
-
+    if [[ -z $EDITOR  || $EDITOR != $default_editor ]]; then
+		set_editor
+	fi
+	
     # Check for validity of argument
     [[ $1 != "reset" && $1 != "post" && $1 != "rebuild" && $1 != "list" && $1 != "edit" && $1 != "delete" && $1 != "tags" ]] && 
         usage && exit
